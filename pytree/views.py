@@ -6,6 +6,8 @@ import subprocess
 import yaml
 from yaml import FullLoader
 from flask_cors import cross_origin
+import uuid
+from flask import send_file
 
 yaml_config_file = (path.dirname(path.abspath(__file__)) + ".yml")
 with open(yaml_config_file, 'r') as f:
@@ -48,6 +50,10 @@ def get_profile():
     point_cloud = request.args['pointCloud']
     potree_file = point_clouds[point_cloud]
     attributes = [request.args['attributes']]
+    try:
+        get_las = request.args['getLAS']
+    except:
+        get_las = "0"
     
     app.logger.debug('Request args:')
     app.logger.debug(request.args)
@@ -56,14 +62,18 @@ def get_profile():
         app.logger.error('metadata.json file not found could not be found')
         return 'metadata.json file not found'
     
+    if get_las=="0":
+        filename = 'stdout'
+    else:
+        filename = "/tmp/"+str(uuid.uuid4())+".las"
     cmd = [cpotree, potree_file, "--stdout"] + attributes + [
-        "-o", 'stdout',
+        "-o", filename,
         "--coordinates", polyline,
         "--width", width,
         "--min-level", minLevel,
         "--max-level", maxLevel
     ]
-    
+
     app.logger.debug('Subprocess command:')
     app.logger.debug(cmd)
 
@@ -74,7 +84,11 @@ def get_profile():
 
     [out, err] = p.communicate()
 
-    return out
+    if get_las=="0":
+        return out
+    else:        
+        return send_file(filename, attachment_filename='output.las')
+    #TODO: delete file
 
 
 @app.route("/profile/config")
