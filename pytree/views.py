@@ -2,10 +2,13 @@
 from pytree import app
 from flask import jsonify, request, render_template
 from os import path
+import os
 import subprocess
 import yaml
 from yaml import FullLoader
 from flask_cors import cross_origin
+import uuid
+from flask import send_file
 
 yaml_config_file = (path.dirname(path.abspath(__file__)) + ".yml")
 with open(yaml_config_file, 'r') as f:
@@ -33,7 +36,6 @@ def get_profile():
     """
     app.logger.debug('Pytree config:')
     app.logger.debug(pytree_config)
-
     cpotree = pytree_config['vars']['cpotree_executable']
     point_clouds = pytree_config['vars']['pointclouds']
     polyline = request.args['coordinates']
@@ -41,14 +43,20 @@ def get_profile():
     if polyline == '':
         app.logger.error('Polyline could not be generated')
         return 'Empty coordinates'
-
-    maxLevel = request.args['maxLOD']
-    minLevel = request.args['minLOD']
+    maxLevel = None
+    minLevel = None
+    if 'maxLOD' in request.args:
+        maxLevel = request.args['maxLOD']
+    if 'minLOD' in request.args:
+        minLevel = request.args['minLOD']
     width = request.args['width']
     point_cloud = request.args['pointCloud']
     potree_file = point_clouds[point_cloud]
     attributes = [request.args['attributes']]
-    
+    get_las = "0"
+    if 'getLAS' in request.args:
+        get_las = request.args['getLAS']
+
     app.logger.debug('Request args:')
     app.logger.debug(request.args)
 
@@ -56,14 +64,25 @@ def get_profile():
         app.logger.error('metadata.json file not found could not be found')
         return 'metadata.json file not found'
     
-    cmd = [cpotree, potree_file, "--stdout"] + attributes + [
-        "-o", 'stdout',
-        "--coordinates", polyline,
-        "--width", width,
-        "--min-level", minLevel,
-        "--max-level", maxLevel
-    ]
-    
+    if get_las == "0":
+        filename = 'stdout'
+    else:
+        filename = "/tmp/"+str(uuid.uuid4())+".las"
+
+    cpotree_args = ["-o", filename,
+                    "--coordinates", polyline,
+                    "--width", width]
+
+    if minLevel is not None:
+        cpotree_args.append("--min-level")
+        cpotree_args.append(minLevel)
+
+    if maxLevel is not None:
+        cpotree_args.append("--max-level")
+        cpotree_args.append(maxLevel)
+
+    cmd = [cpotree, potree_file, "--stdout"] + attributes + cpotree_args
+
     app.logger.debug('Subprocess command:')
     app.logger.debug(cmd)
 
@@ -74,7 +93,13 @@ def get_profile():
 
     [out, err] = p.communicate()
 
-    return out
+    if get_las == "0":
+        return out
+    else:
+        resp = send_file(filename, as_attachment = True, attachment_filename='output.las')
+        os.remove(filename)
+        return resp
+
 
 
 @app.route("/profile/config")
