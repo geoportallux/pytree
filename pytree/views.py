@@ -69,7 +69,7 @@ def get_profile():
     else:
         filename = "/tmp/"+str(uuid.uuid4())+".las"
 
-    cpotree_args = ["-i", "s3://3d-data/3d-tiles/ACT2024_LiDAR_Potree/pointclouds/"
+    cpotree_args = ["-i", "s3://3d-data/3d-tiles/ACT2024_LiDAR_Potree/pointclouds/",
                     "-o", filename,
                     "--coordinates", polyline,
                     "--width", width]
@@ -82,7 +82,7 @@ def get_profile():
         cpotree_args.append("--max-level")
         cpotree_args.append(maxLevel)
 
-    cmd = [cpotree, potree_file, "--stdout"] + attributes + cpotree_args
+    cmd = [cpotree, "--stdout"] + attributes + cpotree_args
 
     app.logger.debug('Subprocess command:')
     app.logger.debug(cmd)
@@ -91,9 +91,9 @@ def get_profile():
         bufsize=-1,
         stdout=subprocess.PIPE
     )
-
+    app.logger.debug("Popen")
     [out, err] = p.communicate()
-
+    app.logger.debug("communicate")
     if get_las == "0":
         return out
     else:
