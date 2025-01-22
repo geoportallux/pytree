@@ -60,16 +60,17 @@ def get_profile():
     app.logger.debug('Request args:')
     app.logger.debug(request.args)
 
-    if path.isfile(potree_file) == False:
-        app.logger.error('metadata.json file not found could not be found')
-        return 'metadata.json file not found'
+    #if path.isfile(potree_file) == False:
+    #    app.logger.error('metadata.json file not found could not be found')
+    #    return 'metadata.json file not found'
     
     if get_las == "0":
         filename = 'stdout'
     else:
         filename = "/tmp/"+str(uuid.uuid4())+".las"
 
-    cpotree_args = ["-o", filename,
+    cpotree_args = ["-i", "s3://3d-data/3d-tiles/ACT2024_LiDAR_Potree/pointclouds/"
+                    "-o", filename,
                     "--coordinates", polyline,
                     "--width", width]
 
