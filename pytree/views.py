@@ -59,20 +59,26 @@ def get_profile():
 
     app.logger.debug('Request args:')
     app.logger.debug(request.args)
-
-    #if path.isfile(potree_file) == False:
-    #    app.logger.error('metadata.json file not found could not be found')
-    #    return 'metadata.json file not found'
-    
+    cpotree_args = []
+    if potree_file.startswith("s3://"):
+        cpotree_args.append("-i") 
+        cpotree_args.append(potree_file)
+    elif path.isfile(potree_file) == False:
+        app.logger.error('metadata.json file not found could not be found')
+        return 'metadata.json file not found'
+    else:
+        cpotree_args.append(potree_file)
     if get_las == "0":
         filename = 'stdout'
     else:
         filename = "/tmp/"+str(uuid.uuid4())+".las"
-
-    cpotree_args = ["-i", "s3://3d-data/3d-tiles/ACT2024_LiDAR_Potree/pointclouds/",
-                    "-o", filename,
-                    "--coordinates", polyline,
-                    "--width", width]
+    
+    cpotree_args.append("-o")
+    cpotree_args.append(filename)
+    cpotree_args.append("--coordinates")
+    cpotree_args.append(polyline)
+    cpotree_args.append("--width")
+    cpotree_args.append(width)
 
     if minLevel is not None:
         cpotree_args.append("--min-level")
